@@ -1,1 +1,9 @@
 streamlit
+pandas
+requests
+beautifulsoup4
+anthropic
+openai
+pythainlp
+lxml
+google-generativeai
