@@ -14,11 +14,36 @@ configure(api_key=gemini_api_key)
 model = GenerativeModel("gemini-1.5-pro")
 
 # Streamlit Setup
-st.title("Web Scraper Agent - SEM Planner")
+st.title("SEM Planner")
 st.sidebar.title("Select Step:")
-page = st.sidebar.radio("", ["Page 1", "Page 2", "Page 3", "Page 4"])
+page = st.sidebar.radio("", ["Business Understanding Agent", "Web Scraper Agent - SEM Planner", "Keyword Planner", "Ads Generation"])
 
-if page == "Page 2":
+# Page 1 - Business Understanding Agent
+if page == "Business Understanding Agent":
+    st.subheader("Gather Business Understanding")
+
+    # Input fields
+    business_overview = st.text_area("Business Overview")
+    target_audience = st.text_area("Target Audience")
+    product_details = st.text_area("Product/Service Details")
+
+    # Store data as JSON in memory
+    if st.button("Save Details"):
+        business_info = {
+            "Business Overview": business_overview,
+            "Target Audience": target_audience,
+            "Product/Service Details": product_details
+        }
+        st.session_state["business_info"] = business_info
+        st.success("Business information saved successfully!")
+
+    # Display saved data
+    if "business_info" in st.session_state:
+        st.subheader("Saved Business Information")
+        st.json(st.session_state["business_info"])
+
+# Page 2 - Web Scraper Agent - SEM Planner
+elif page == "Web Scraper Agent - SEM Planner":
     st.subheader("Compare Keywords and Generate SEM Checklist")
 
     # Input URLs
@@ -133,5 +158,11 @@ if page == "Page 2":
                 st.error("Failed to fetch HTML content from one or both URLs.")
         else:
             st.warning("Please enter both URLs to proceed.")
-else:
-    st.write("Content on each page must be different.")
+
+# Page 3 - Keyword Planner
+elif page == "Keyword Planner":
+    st.write("Keyword Planner (Under Development)")
+
+# Page 4 - Ads Generation
+elif page == "Ads Generation":
+    st.write("Ads Generation (Under Development)")
