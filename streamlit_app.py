@@ -4,6 +4,14 @@ from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import streamlit as st
+from google.generativeai import GenerativeModel, configure
+
+# Capture Gemini API Key
+gemini_api_key = st.text_input("Gemini API Key:", placeholder="Type your API Key here...", type="password")
+
+# Configure Gemini API
+configure(api_key=gemini_api_key)
+model = GenerativeModel("gemini-1.5-pro")
 
 # Streamlit Setup
 st.title("Web Scraper Agent - SEM Planner")
@@ -51,6 +59,25 @@ def compute_similarity(our_text, competitor_text):
     similarity = cosine_similarity([vectors[0]], [vectors[1]])[0][0]
     return similarity
 
+# Function: Use Gemini for Analysis
+def analyze_with_gemini(our_meta, comp_meta, our_keywords, comp_keywords):
+    prompt = f"""
+    Analyze and compare the following website metadata and keywords for SEM planning:
+    Our Website:
+    Title: {our_meta[0]}
+    Description: {our_meta[1]}
+    Keywords: {', '.join(our_keywords.index)}
+
+    Competitor Website:
+    Title: {comp_meta[0]}
+    Description: {comp_meta[1]}
+    Keywords: {', '.join(comp_keywords.index)}
+
+    Provide insights, recommendations, and identify gaps to improve SEM strategies.
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
 # Process URLs
 if st.button("Analyze Websites"):
     if our_url and competitor_url:
@@ -60,8 +87,8 @@ if st.button("Analyze Websites"):
 
         if our_soup and competitor_soup:
             # Extract Metadata
-            our_title, our_desc = extract_meta_data(our_soup)
-            comp_title, comp_desc = extract_meta_data(competitor_soup)
+            our_meta = extract_meta_data(our_soup)
+            comp_meta = extract_meta_data(competitor_soup)
 
             # Extract Keywords
             our_keywords = extract_keywords(our_soup)
@@ -70,17 +97,20 @@ if st.button("Analyze Websites"):
             # Compute Similarity
             similarity = compute_similarity(' '.join(our_keywords.index), ' '.join(comp_keywords.index))
 
+            # Gemini Analysis
+            gemini_analysis = analyze_with_gemini(our_meta, comp_meta, our_keywords, comp_keywords)
+
             # Display Results
             st.subheader("Metadata Analysis")
-            st.write(f"**Our Title:** {our_title}")
-            st.write(f"**Our Description:** {our_desc}")
-            st.write(f"**Competitor Title:** {comp_title}")
-            st.write(f"**Competitor Description:** {comp_desc}")
+            st.write(f"**Our Title:** {our_meta[0]}")
+            st.write(f"**Our Description:** {our_meta[1]}")
+            st.write(f"**Competitor Title:** {comp_meta[0]}")
+            st.write(f"**Competitor Description:** {comp_meta[1]}")
 
             st.subheader("Keyword Analysis")
-            st.write("**Our Top Keywords:**")
+            st.write("**Our Top Keywords:")
             st.write(our_keywords)
-            st.write("**Competitor Top Keywords:**")
+            st.write("**Competitor Top Keywords:")
             st.write(comp_keywords)
 
             st.subheader("Comparison Results")
@@ -92,6 +122,9 @@ if st.button("Analyze Websites"):
                 st.warning("Moderate similarity. Consider improving keyword alignment.")
             else:
                 st.error("Low similarity. Revise your keyword strategy.")
+
+            st.subheader("Gemini Analysis Recommendations")
+            st.write(gemini_analysis)
         else:
             st.error("Failed to fetch HTML content from one or both URLs.")
     else:
