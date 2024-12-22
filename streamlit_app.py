@@ -10,6 +10,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
+import os
 
 # Page Configuration
 st.set_page_config(page_title="SEM Planner", layout="wide")
