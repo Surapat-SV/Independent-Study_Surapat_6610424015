@@ -20,4 +20,3 @@ matplotlib
 crewai
 crewai-tools
 chromadb
-sqlite3
