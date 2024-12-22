@@ -1,3 +1,6 @@
+# SEM Planner - Streamlit Application with AI Agents
+
+# Import necessary libraries
 import streamlit as st
 import os
 import json
@@ -5,14 +8,12 @@ import pandas as pd
 import numpy as np
 from crewai import Agent, Task, Crew
 from langchain.vectorstores import FAISS
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.embeddings.google import GoogleGenerativeAIEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
 from google.cloud import bigquery
 
 # Set environment variables for API keys
-os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI_API_KEY"]
 os.environ['GEMINI_API_KEY'] = st.secrets["GOOGLE_API_KEY"]
 
 # Page Configuration
@@ -24,7 +25,7 @@ st.sidebar.subheader("Select Step:")
 page = st.sidebar.radio("", ["Page 1", "Page 2", "Page 3", "Page 4", "Report"])
 
 # Agent Setup
-embedding_model = OpenAIEmbeddings()
+embedding_model = GoogleGenerativeAIEmbeddings()
 
 # Helper Function: Create FAISS Index
 def create_faiss_index(documents, embedding_model):
