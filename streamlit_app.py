@@ -27,22 +27,6 @@ page = st.sidebar.radio("", ["Page 1", "Page 2", "Page 3", "Page 4", "Report"])
 # Agent Setup
 embedding_model = GoogleGenerativeAIEmbeddings()
 
-# Helper Function: Create FAISS Index
-def create_faiss_index(documents, embedding_model):
-    """Create a FAISS index for storing embeddings."""
-    index = FAISS.from_documents(documents, embedding_model)
-    return index
-
-# Define Dummy Data for Testing
-dummy_data = [
-    {"content": "This is a test document about SEM strategies."},
-    {"content": "Keyword planning for Google Ads optimization."},
-]
-
-# Create FAISS Index
-docs = [PromptTemplate(input_variables=[], template=d['content']) for d in dummy_data]
-faiss_index = create_faiss_index(docs, embedding_model)
-
 # Query BigQuery
 def query_bigquery(sql_query):
     """Query data from Google BigQuery."""
@@ -62,7 +46,7 @@ if page == "Page 1":
     target_audience = st.text_area("Target Audience")
     product_details = st.text_area("Product/Service Details")
 
-    # Create Agent
+    # Create Agent and Task
     business_agent = Agent(
         role="Business Analyst",
         goal="Understand business context and define target audience.",
@@ -70,8 +54,19 @@ if page == "Page 1":
         verbose=True,
     )
 
+    business_task = Task(
+        description="Analyze business overview, target audience, and product details.",
+        agent=business_agent
+    )
+
+    business_crew = Crew(agents=[business_agent], tasks=[business_task])
+
     if st.button("Process Business Data"):
-        result = business_agent.run(f"Overview: {business_overview}, Audience: {target_audience}, Product: {product_details}")
+        result = business_crew.kickoff(inputs={
+            "overview": business_overview,
+            "audience": target_audience,
+            "product": product_details
+        })
         st.write("Agent Output:", result)
 
 # Page 2: Web Scraper Agent
@@ -83,10 +78,27 @@ elif page == "Page 2":
     our_url = st.text_input("Our Website URL")
     competitor_url = st.text_input("Competitor Website URL")
 
+    # Create Agent and Task
+    scraper_agent = Agent(
+        role="Web Scraper",
+        goal="Extract and compare metadata from websites.",
+        tools=[],
+        verbose=True,
+    )
+
+    scraper_task = Task(
+        description="Scrape and compare metadata between URLs.",
+        agent=scraper_agent
+    )
+
+    scraper_crew = Crew(agents=[scraper_agent], tasks=[scraper_task])
+
     if st.button("Scrape and Analyze"):
-        # Simulate scraping and keyword analysis
-        st.write(f"Scraping data from {our_url} and {competitor_url}")
-        st.write("Comparison Results: Keywords matched and differences identified.")
+        result = scraper_crew.kickoff(inputs={
+            "our_url": our_url,
+            "competitor_url": competitor_url
+        })
+        st.write("Scraper Output:", result)
 
 # Page 3: Keyword Planning Agent
 elif page == "Page 3":
@@ -95,6 +107,21 @@ elif page == "Page 3":
 
     # Inputs
     user_query = st.text_area("Enter your query for keywords")
+
+    # Create Agent and Task
+    planning_agent = Agent(
+        role="Keyword Planner",
+        goal="Generate keyword recommendations based on BigQuery data.",
+        tools=[],
+        verbose=True,
+    )
+
+    planning_task = Task(
+        description="Fetch keyword data from BigQuery.",
+        agent=planning_agent
+    )
+
+    planning_crew = Crew(agents=[planning_agent], tasks=[planning_task])
 
     if st.button("Generate Keywords"):
         sql_query = f"""
@@ -115,10 +142,28 @@ elif page == "Page 4":
     ad_headline = st.text_input("Ad Headline (30 characters)")
     ad_description = st.text_area("Ad Description (90 characters)")
 
+    # Create Agent and Task
+    copywriter_agent = Agent(
+        role="Ads Copywriter",
+        goal="Generate ad headlines and descriptions.",
+        tools=[],
+        verbose=True,
+    )
+
+    copywriter_task = Task(
+        description="Generate ad copy for SEM campaigns.",
+        agent=copywriter_agent
+    )
+
+    copywriter_crew = Crew(agents=[copywriter_agent], tasks=[copywriter_task])
+
     if st.button("Generate Ads Copy"):
+        result = copywriter_crew.kickoff(inputs={
+            "headline": ad_headline,
+            "description": ad_description
+        })
         st.write("Generated Ad Copy:")
-        st.write(f"Headline: {ad_headline}")
-        st.write(f"Description: {ad_description}")
+        st.write(result)
 
 # Page 5: Project Manager Agent
 elif page == "Report":
@@ -128,11 +173,11 @@ elif page == "Report":
     # Simulate Report Generation
     st.markdown("## Final SEM Report")
     st.markdown("### Business Overview")
-    st.markdown(business_overview)
+    st.markdown("[Business Overview Data Here]")
     st.markdown("### Target Audience")
-    st.markdown(target_audience)
+    st.markdown("[Target Audience Data Here]")
     st.markdown("### Keyword Analysis")
     st.markdown("Keywords comparison results displayed here.")
     st.markdown("### Ads Copy")
-    st.markdown(f"Headline: {ad_headline}")
-    st.markdown(f"Description: {ad_description}")
+    st.markdown("Headline: [Generated Headline Here]")
+    st.markdown("Description: [Generated Description Here]")
