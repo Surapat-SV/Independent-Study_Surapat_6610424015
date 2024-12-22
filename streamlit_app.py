@@ -119,26 +119,39 @@ elif page == "Web Scraper Agent - SEM Planner":
         similarity = cosine_similarity([vectors[0]], [vectors[1]])[0][0]
         return similarity
 
+    # Gemini Analysis for SEM Checklist
+    def analyze_with_gemini(our_meta, comp_meta, our_keywords, comp_keywords):
+        prompt = f"""
+        Analyze and compare the following website metadata and keywords for SEM planning:
+        Our Website:
+        Title: {our_meta[0]}
+        Description: {our_meta[1]}
+        Keywords: {', '.join(our_keywords.index)}
+
+        Competitor Website:
+        Title: {comp_meta[0]}
+        Description: {comp_meta[1]}
+        Keywords: {', '.join(comp_keywords.index)}
+
+        Provide insights, recommendations, and identify gaps to improve SEM strategies.
+        """
+        response = model.generate_content(prompt)
+        return response.text
+
     # Process URLs
     if st.button("Analyze Websites"):
         if our_url and competitor_url:
-            # Fetch HTML
             our_soup = fetch_html(our_url)
             competitor_soup = fetch_html(competitor_url)
 
             if our_soup and competitor_soup:
-                # Extract Metadata
                 our_meta = extract_meta_data(our_soup)
                 comp_meta = extract_meta_data(competitor_soup)
-
-                # Extract Keywords
                 our_keywords = extract_keywords(our_soup)
                 comp_keywords = extract_keywords(competitor_soup)
-
-                # Compute Similarity
                 similarity = compute_similarity(' '.join(our_keywords.index), ' '.join(comp_keywords.index))
+                gemini_analysis = analyze_with_gemini(our_meta, comp_meta, our_keywords, comp_keywords)
 
-                # Display Results
                 st.subheader("Metadata Analysis")
                 st.write(f"**Our Title:** {our_meta[0]}")
                 st.write(f"**Our Description:** {our_meta[1]}")
@@ -153,6 +166,9 @@ elif page == "Web Scraper Agent - SEM Planner":
 
                 st.subheader("Comparison Results")
                 st.write(f"**Keyword Similarity (Cosine):** {similarity:.2f}")
+
+                st.subheader("Gemini Analysis Recommendations")
+                st.write(gemini_analysis)
             else:
                 st.error("Failed to fetch HTML content from one or both URLs.")
         else:
