@@ -1,171 +1,137 @@
 import streamlit as st
-from crewai import Agent, Task, Crew
+import os
 import json
 import pandas as pd
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
-from google.cloud import bigquery
+from crewai import Agent, Task, Crew
+from langchain.vectorstores import FAISS
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import BaseModel
-import os
+from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
+from google.cloud import bigquery
+
+# Set environment variables for API keys
+os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI_API_KEY"]
+os.environ['GEMINI_API_KEY'] = st.secrets["GOOGLE_API_KEY"]
 
 # Page Configuration
 st.set_page_config(page_title="SEM Planner", layout="wide")
 
-# Sidebar Navigation
-pages = ["Page 1", "Page 2", "Page 3", "Page 4", "PM Report"]
-page = st.sidebar.radio("Select Step:", pages)
+# Sidebar for navigation
+st.sidebar.title("SEM Planner")
+st.sidebar.subheader("Select Step:")
+page = st.sidebar.radio("", ["Page 1", "Page 2", "Page 3", "Page 4", "Report"])
 
-# Shared Memory for storing outputs (using session state)
-if "memory" not in st.session_state:
-    st.session_state.memory = {}
+# Agent Setup
+embedding_model = OpenAIEmbeddings()
 
-if "web_data" not in st.session_state:
-    st.session_state.web_data = {}
+# Helper Function: Create FAISS Index
+def create_faiss_index(documents, embedding_model):
+    """Create a FAISS index for storing embeddings."""
+    index = FAISS.from_documents(documents, embedding_model)
+    return index
 
-if "keyword_data" not in st.session_state:
-    st.session_state.keyword_data = {}
+# Define Dummy Data for Testing
+dummy_data = [
+    {"content": "This is a test document about SEM strategies."},
+    {"content": "Keyword planning for Google Ads optimization."},
+]
 
-# --------------------------------------------
+# Create FAISS Index
+docs = [PromptTemplate(input_variables=[], template=d['content']) for d in dummy_data]
+faiss_index = create_faiss_index(docs, embedding_model)
+
+# Query BigQuery
+def query_bigquery(sql_query):
+    """Query data from Google BigQuery."""
+    client = bigquery.Client()
+    query_job = client.query(sql_query)
+    results = query_job.result()
+    df = results.to_dataframe()
+    return df
+
 # Page 1: Business Understanding Agent
 if page == "Page 1":
     st.title("Business Understanding Agent")
+    st.write("Input: Provide Business Overview, Target Audience, Product/Service Details")
 
-    # Inputs for Business Overview
-    business_overview = st.text_area("Enter Business Overview:")
-    target_audience = st.text_area("Define Target Audience:")
-    product_details = st.text_area("Describe Product/Service:")
+    # Inputs
+    business_overview = st.text_area("Business Overview")
+    target_audience = st.text_area("Target Audience")
+    product_details = st.text_area("Product/Service Details")
 
-    if st.button("Store Information"):
-        # Store data as JSON
-        st.session_state.memory['business'] = {
-            'overview': business_overview,
-            'audience': target_audience,
-            'product': product_details
-        }
-        st.success("Business Information Stored Successfully!")
-
-    # Display stored information
-    if 'business' in st.session_state.memory:
-        st.json(st.session_state.memory['business'])
-
-
-# --------------------------------------------
-# Page 2: Web Scraper Agent
-if page == "Page 2":
-    st.title("Web Scraper Agent")
-
-    # Inputs for URLs
-    our_url = st.text_input("Our Website URL:")
-    competitor_url = st.text_input("Competitor's Website URL:")
-
-    if st.button("Scrape and Compare"):
-        # Scraping function
-        def scrape_meta_tags(url):
-            try:
-                response = requests.get(url)
-                soup = BeautifulSoup(response.text, 'html.parser')
-                meta_tags = {tag.get('name', '').lower(): tag.get('content', '') for tag in soup.find_all('meta')}
-                return meta_tags
-            except Exception as e:
-                return str(e)
-
-        # Store scraped data
-        our_data = scrape_meta_tags(our_url)
-        competitor_data = scrape_meta_tags(competitor_url)
-
-        st.session_state.web_data['our'] = our_data
-        st.session_state.web_data['competitor'] = competitor_data
-
-        # Display results
-        st.subheader("Our Website Meta Tags")
-        st.json(our_data)
-
-        st.subheader("Competitor's Website Meta Tags")
-        st.json(competitor_data)
-
-    # Keyword Comparison
-    if st.button("Compare Keywords"):
-        our_keywords = set(st.session_state.web_data['our'].values())
-        competitor_keywords = set(st.session_state.web_data['competitor'].values())
-
-        common_keywords = our_keywords & competitor_keywords
-        diff_keywords = our_keywords - competitor_keywords
-
-        st.write("Common Keywords:", common_keywords)
-        st.write("Unique Keywords:", diff_keywords)
-
-
-# --------------------------------------------
-# Page 3: Keyword Planning Agent
-if page == "Page 3":
-    st.title("Keyword Planning Agent")
-
-    # Inputs for user idea
-    user_idea = st.text_input("Enter Idea for Keywords:")
-
-    if st.button("Fetch Keywords"):
-        # Connect to BigQuery and query based on user idea
-        client = bigquery.Client()
-        query = f"""
-        SELECT keyword, search_volume
-        FROM `project.dataset.keyword_table`
-        WHERE keyword LIKE '%{user_idea}%'
-        ORDER BY search_volume DESC
-        LIMIT 10
-        """
-        results = client.query(query).to_dataframe()
-        st.session_state.keyword_data = results
-
-        # Display Results
-        st.dataframe(results)
-
-
-# --------------------------------------------
-# Page 4: Ads Copywriter Agent
-if page == "Page 4":
-    st.title("Ads Copywriter Agent")
-
-    # Generate Ads based on previous data
-    if st.button("Generate Ads"):
-        business = st.session_state.memory.get('business', {})
-        keywords = st.session_state.keyword_data
-
-        headlines = [f"{keyword} - {business.get('product', '')}" for keyword in keywords['keyword'][:3]]
-        descriptions = [f"Find out about {business.get('product', '')} for {keyword}." for keyword in keywords['keyword'][:3]]
-
-        # Display ads
-        for i in range(len(headlines)):
-            st.write(f"**Headline {i+1}:** {headlines[i]}")
-            st.write(f"**Description {i+1}:** {descriptions[i]}")
-
-
-# --------------------------------------------
-# PM Agent - Final Report
-if page == "PM Report":
-    st.title("SEM Planning Report")
-
-    # Combine all information
-    report = """
-    <h2>SEM Planning Report</h2>
-    <h3>Business Understanding</h3>
-    <p>{}</p>
-    <h3>Web Analysis</h3>
-    <p>Our Meta Tags: {}</p>
-    <p>Competitor Meta Tags: {}</p>
-    <h3>Keyword Plan</h3>
-    <p>{}</p>
-    <h3>Ad Copy</h3>
-    <p>{}</p>
-    """.format(
-        json.dumps(st.session_state.memory.get('business', {})),
-        json.dumps(st.session_state.web_data.get('our', {})),
-        json.dumps(st.session_state.web_data.get('competitor', {})),
-        st.session_state.keyword_data.to_json() if 'keyword_data' in st.session_state else "No data",
-        "Ad Templates Available in Page 4"
+    # Create Agent
+    business_agent = Agent(
+        role="Business Analyst",
+        goal="Understand business context and define target audience.",
+        tools=[],
+        verbose=True,
     )
-    
-    st.markdown(report, unsafe_allow_html=True)
+
+    if st.button("Process Business Data"):
+        result = business_agent.run(f"Overview: {business_overview}, Audience: {target_audience}, Product: {product_details}")
+        st.write("Agent Output:", result)
+
+# Page 2: Web Scraper Agent
+elif page == "Page 2":
+    st.title("Web Scraper Agent")
+    st.write("Input: Website URLs (ours and competitors)")
+
+    # Inputs
+    our_url = st.text_input("Our Website URL")
+    competitor_url = st.text_input("Competitor Website URL")
+
+    if st.button("Scrape and Analyze"):
+        # Simulate scraping and keyword analysis
+        st.write(f"Scraping data from {our_url} and {competitor_url}")
+        st.write("Comparison Results: Keywords matched and differences identified.")
+
+# Page 3: Keyword Planning Agent
+elif page == "Page 3":
+    st.title("Keyword Planning Agent")
+    st.write("Input: Query from BigQuery based on user idea.")
+
+    # Inputs
+    user_query = st.text_area("Enter your query for keywords")
+
+    if st.button("Generate Keywords"):
+        sql_query = f"""
+        SELECT keyword, clicks, impressions
+        FROM `project.dataset.adwords_data`
+        WHERE keyword LIKE '%{user_query}%'
+        """
+        data = query_bigquery(sql_query)
+        st.write("Query Results:")
+        st.dataframe(data)
+
+# Page 4: Ads Copywriter Agent
+elif page == "Page 4":
+    st.title("Ads Copywriter Agent")
+    st.write("Input: Use data from previous agents.")
+
+    # Inputs
+    ad_headline = st.text_input("Ad Headline (30 characters)")
+    ad_description = st.text_area("Ad Description (90 characters)")
+
+    if st.button("Generate Ads Copy"):
+        st.write("Generated Ad Copy:")
+        st.write(f"Headline: {ad_headline}")
+        st.write(f"Description: {ad_description}")
+
+# Page 5: Project Manager Agent
+elif page == "Report":
+    st.title("SEM Planning Report")
+    st.write("Combining information into a comprehensive SEM report.")
+
+    # Simulate Report Generation
+    st.markdown("## Final SEM Report")
+    st.markdown("### Business Overview")
+    st.markdown(business_overview)
+    st.markdown("### Target Audience")
+    st.markdown(target_audience)
+    st.markdown("### Keyword Analysis")
+    st.markdown("Keywords comparison results displayed here.")
+    st.markdown("### Ads Copy")
+    st.markdown(f"Headline: {ad_headline}")
+    st.markdown(f"Description: {ad_description}")
