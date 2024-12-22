@@ -19,3 +19,4 @@ numpy
 matplotlib
 crewai
 crewai-tools
+chromadb
