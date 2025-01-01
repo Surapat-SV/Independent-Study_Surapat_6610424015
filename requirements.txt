@@ -11,3 +11,13 @@ matplotlib
 crewai
 crewai_tools
 langchain_community
+sentence-transformers
+scikit-learn
+google-auth
+google-auth-oauthlib
+numpy
+scikit-learn
+google-cloud-storage
+python-crfsuite
+pythainlp
+epitran
