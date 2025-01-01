@@ -21,3 +21,4 @@ google-cloud-storage
 python-crfsuite
 pythainlp
 epitran
+pydantic
