@@ -20,57 +20,94 @@ st.title("SEM Planner")
 st.sidebar.title("Select Step:")
 page = st.sidebar.radio("", ["Business Understanding Agent", "Web Scraper Agent - SEM Planner", "Keyword Planner", "Ads Generation"])
 
-# Session State for Business Details
+# Initialize session state for business details and chat history
 if 'business_data' not in st.session_state:
     st.session_state.business_data = {
-        "Business Overview": "",
-        "Target Audience": "",
-        "Product/Service Details": ""
+        "Business Name": "",
+        "Product/Service": "",
+        "Location": "",
+        "Necessary Information": "",
+        "Target Audience": ""
     }
 
-if page == "Business Understanding Agent":
-    st.subheader("Business Understanding Agent - Chatbot")
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
 
-    # Initialize chat history
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
+if 'question_index' not in st.session_state:
+    st.session_state.question_index = 0
 
-    # Display chat history
-    for role, message in st.session_state.chat_history:
-        st.chat_message(role).markdown(message)
+# List of predefined questions
+questions = [
+    "What is your business name?",
+    "What products or services do you offer?",
+    "Do you have any physical stores? If yes, where are they located?",
+    "Please provide any other necessary information about your business."
+]
 
-    # Chat input for conversation
-    user_input = st.chat_input("Tell me about your business or target audience...")
+# Display chat history
+st.subheader("Business Understanding Agent - Chatbot")
+for role, message in st.session_state.chat_history:
+    st.chat_message(role).markdown(message)
 
-    # Process input if provided
+# Greeting message if the chat starts
+if st.session_state.question_index == 0:
+    greeting = "Hello! My name is N'Assist, your new intern. I'll help you define your target audience."
+    st.session_state.chat_history.append(("assistant", greeting))
+    st.chat_message("assistant").markdown(greeting)
+
+# Ask the current question
+if st.session_state.question_index < len(questions):
+    current_question = questions[st.session_state.question_index]
+    st.session_state.chat_history.append(("assistant", current_question))
+    st.chat_message("assistant").markdown(current_question)
+
+    # Chat input for user response
+    user_input = st.chat_input("Your response...")
     if user_input:
-        # Append user input to chat history
+        # Save user input and progress to the next question
         st.session_state.chat_history.append(("user", user_input))
         st.chat_message("user").markdown(user_input)
 
-        # Use Gemini to help define the target audience
-        if gemini_api_key:
-            prompt = (
-                f"Analyze this input and extract details about the business overview, target audience, and product/service details: {user_input}. "
-                "Provide a summary focusing on defining the target audience based on the input provided."
-            )
-            try:
-                response = model.generate_content(prompt)
-                gemini_response = response.text
+        # Save responses based on the question index
+        if st.session_state.question_index == 0:
+            st.session_state.business_data["Business Name"] = user_input
+        elif st.session_state.question_index == 1:
+            st.session_state.business_data["Product/Service"] = user_input
+        elif st.session_state.question_index == 2:
+            st.session_state.business_data["Location"] = user_input
+        elif st.session_state.question_index == 3:
+            st.session_state.business_data["Necessary Information"] = user_input
 
-                # Append Gemini's response to chat history
-                st.session_state.chat_history.append(("assistant", gemini_response))
-                st.chat_message("assistant").markdown(gemini_response)
+        # Move to the next question
+        st.session_state.question_index += 1
 
-                # Extract business data using Gemini's response
-                st.session_state.business_data["Business Overview"] = user_input
-                st.session_state.business_data["Target Audience"] = gemini_response
-                st.session_state.business_data["Product/Service Details"] = user_input
+# Final summary after all questions
+if st.session_state.question_index == len(questions):
+    summary_message = (
+        "Thank you for providing the details! Here's the summary of your business information:"
+    )
+    st.session_state.chat_history.append(("assistant", summary_message))
+    st.chat_message("assistant").markdown(summary_message)
 
-            except Exception as e:
-                st.error(f"An error occurred while using Gemini: {e}")
+    # Extract details about target audience using Gemini (if API key is provided)
+    if gemini_api_key:
+        prompt = (
+            f"Based on the following details, define the target audience:\n"
+            f"Business Name: {st.session_state.business_data['Business Name']}\n"
+            f"Product/Service: {st.session_state.business_data['Product/Service']}\n"
+            f"Location: {st.session_state.business_data['Location']}\n"
+            f"Necessary Information: {st.session_state.business_data['Necessary Information']}"
+        )
+        try:
+            response = model.generate_content(prompt)
+            gemini_response = response.text
+            st.session_state.business_data["Target Audience"] = gemini_response
+            st.session_state.chat_history.append(("assistant", gemini_response))
+            st.chat_message("assistant").markdown(gemini_response)
+        except Exception as e:
+            st.error(f"An error occurred while using Gemini: {e}")
 
-    # Display saved details
+    # Display the saved business information
     st.subheader("Saved Information")
     st.json(st.session_state.business_data)
 
