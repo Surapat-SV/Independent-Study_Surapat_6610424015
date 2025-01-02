@@ -50,19 +50,20 @@ questions = [
 ]
 
 if page == "Business Understanding Agent":
-    # Display chat history
     st.subheader("Business Understanding Agent - Chatbot")
+
+    # Display chat history
     for role, message in st.session_state.chat_history:
         st.chat_message(role).markdown(message)
 
-    # Greeting message if the chat starts
-    if st.session_state.question_index == 0:
+    # Greeting message after Gemini API key is provided
+    if st.session_state.question_index == 0 and gemini_api_key:
         greeting = "Hello! My name is N'Assist, your new intern. I'll help you define your target audience."
         st.session_state.chat_history.append(("assistant", greeting))
         st.chat_message("assistant").markdown(greeting)
 
-    # Ask the current question
-    if st.session_state.question_index < len(questions):
+    # Ask the current question or respond dynamically using Gemini
+    if st.session_state.question_index < len(questions) and gemini_api_key:
         current_question = questions[st.session_state.question_index]
         st.session_state.chat_history.append(("assistant", current_question))
         st.chat_message("assistant").markdown(current_question)
@@ -84,38 +85,52 @@ if page == "Business Understanding Agent":
             elif st.session_state.question_index == 3:
                 st.session_state.business_data["Necessary Information"] = user_input
 
+            # Send user input to Gemini for a follow-up question or feedback
+            prompt = (
+                f"User's input: {user_input}. Based on the context, generate a follow-up question "
+                f"or provide feedback related to the user's business details."
+            )
+            try:
+                response = model.generate_content(prompt)
+                gemini_response = response.text
+                st.session_state.chat_history.append(("assistant", gemini_response))
+                st.chat_message("assistant").markdown(gemini_response)
+            except Exception as e:
+                st.error(f"An error occurred while using Gemini: {e}")
+
             # Move to the next question
             st.session_state.question_index += 1
 
     # Final summary after all questions
-    if st.session_state.question_index == len(questions):
+    if st.session_state.question_index == len(questions) and gemini_api_key:
         summary_message = (
             "Thank you for providing the details! Here's the summary of your business information:"
         )
         st.session_state.chat_history.append(("assistant", summary_message))
         st.chat_message("assistant").markdown(summary_message)
 
-        # Extract details about target audience using Gemini (if API key is provided)
-        if gemini_api_key:
-            prompt = (
-                f"Based on the following details, define the target audience:\n"
-                f"Business Name: {st.session_state.business_data['Business Name']}\n"
-                f"Product/Service: {st.session_state.business_data['Product/Service']}\n"
-                f"Location: {st.session_state.business_data['Location']}\n"
-                f"Necessary Information: {st.session_state.business_data['Necessary Information']}"
-            )
-            try:
-                response = model.generate_content(prompt)
-                gemini_response = response.text
-                st.session_state.business_data["Target Audience"] = gemini_response
-                st.session_state.chat_history.append(("assistant", gemini_response))
-                st.chat_message("assistant").markdown(gemini_response)
-            except Exception as e:
-                st.error(f"An error occurred while using Gemini: {e}")
+        # Extract details about target audience using Gemini
+        prompt = (
+            f"Based on the following details, define the target audience:\n"
+            f"Business Name: {st.session_state.business_data['Business Name']}\n"
+            f"Product/Service: {st.session_state.business_data['Product/Service']}\n"
+            f"Location: {st.session_state.business_data['Location']}\n"
+            f"Necessary Information: {st.session_state.business_data['Necessary Information']}"
+        )
+        try:
+            response = model.generate_content(prompt)
+            gemini_response = response.text
+            st.session_state.business_data["Target Audience"] = gemini_response
+            st.session_state.chat_history.append(("assistant", gemini_response))
+            st.chat_message("assistant").markdown(gemini_response)
+        except Exception as e:
+            st.error(f"An error occurred while using Gemini: {e}")
 
         # Display the saved business information
         st.subheader("Saved Information")
         st.json(st.session_state.business_data)
+    elif not gemini_api_key:
+        st.warning("Please provide a Gemini API key to proceed.")
 
 elif page == "Web Scraper Agent - SEM Planner":
     st.subheader("Compare Keywords and Generate SEM Checklist")
@@ -155,62 +170,62 @@ elif page == "Web Scraper Agent - SEM Planner":
         return tfidf_matrix, feature_names
 
     # Function: Generate Gemini Analysis and Plot Top N Keywords
-def gemini_analyze_and_plot(our_keywords, comp_keywords, tfidf_matrix, feature_names, top_n=5):
-    prompt = f"""
-    Compare the following keyword distributions for SEM planning:
-    Our Website Keywords: {', '.join(our_keywords[:20])}
-    Competitor Website Keywords: {', '.join(comp_keywords[:20])}
-    
-    Provide insights, recommendations, and visualize the keyword distribution differences.
-    """
-    try:
-        response = model.generate_content(prompt)
-        gemini_response = response.text
-    except Exception as e:
-        st.error(f"Gemini API Error: {e}")
-        return None
+    def gemini_analyze_and_plot(our_keywords, comp_keywords, tfidf_matrix, feature_names, top_n=5):
+        prompt = f"""
+        Compare the following keyword distributions for SEM planning:
+        Our Website Keywords: {', '.join(our_keywords[:20])}
+        Competitor Website Keywords: {', '.join(comp_keywords[:20])}
+        
+        Provide insights, recommendations, and visualize the keyword distribution differences.
+        """
+        try:
+            response = model.generate_content(prompt)
+            gemini_response = response.text
+        except Exception as e:
+            st.error(f"Gemini API Error: {e}")
+            return None
 
-    # Generate TF-IDF scores
-    tfidf_scores = tfidf_matrix.toarray()
-    our_scores = tfidf_scores[0]
-    comp_scores = tfidf_scores[1]
+        # Generate TF-IDF scores
+        tfidf_scores = tfidf_matrix.toarray()
+        our_scores = tfidf_scores[0]
+        comp_scores = tfidf_scores[1]
 
-    # Extract top N keywords and scores for each website
-    top_our_indices = np.argsort(our_scores)[::-1][:top_n]
-    top_comp_indices = np.argsort(comp_scores)[::-1][:top_n]
+        # Extract top N keywords and scores for each website
+        top_our_indices = np.argsort(our_scores)[::-1][:top_n]
+        top_comp_indices = np.argsort(comp_scores)[::-1][:top_n]
 
-    top_our_keywords = [feature_names[i] for i in top_our_indices]
-    top_comp_keywords = [feature_names[i] for i in top_comp_indices]
+        top_our_keywords = [feature_names[i] for i in top_our_indices]
+        top_comp_keywords = [feature_names[i] for i in top_comp_indices]
 
-    top_our_values = our_scores[top_our_indices]
-    top_comp_values = comp_scores[top_comp_indices]
+        top_our_values = our_scores[top_our_indices]
+        top_comp_values = comp_scores[top_comp_indices]
 
-    # Combine keywords and scores for plotting
-    combined_keywords = list(set(top_our_keywords + top_comp_keywords))
-    combined_our_scores = [our_scores[feature_names.tolist().index(k)] for k in combined_keywords]
-    combined_comp_scores = [comp_scores[feature_names.tolist().index(k)] for k in combined_keywords]
+        # Combine keywords and scores for plotting
+        combined_keywords = list(set(top_our_keywords + top_comp_keywords))
+        combined_our_scores = [our_scores[feature_names.tolist().index(k)] for k in combined_keywords]
+        combined_comp_scores = [comp_scores[feature_names.tolist().index(k)] for k in combined_keywords]
 
-    # Plot comparison of top keywords
-    plt.figure(figsize=(10, 6))
-    indices = np.arange(len(combined_keywords))
-    width = 0.35
-    plt.bar(indices, combined_our_scores, width, label="Our Website")
-    plt.bar(indices + width, combined_comp_scores, width, label="Competitor Website")
-    plt.xlabel("Keywords")
-    plt.ylabel("TF-IDF Score")
-    plt.title(f"Top {top_n} Keyword Distribution Comparison")
-    plt.xticks(indices + width / 2, combined_keywords, rotation=45, ha="right")
-    plt.legend()
-    st.pyplot(plt)
+        # Plot comparison of top keywords
+        plt.figure(figsize=(10, 6))
+        indices = np.arange(len(combined_keywords))
+        width = 0.35
+        plt.bar(indices, combined_our_scores, width, label="Our Website")
+        plt.bar(indices + width, combined_comp_scores, width, label="Competitor Website")
+        plt.xlabel("Keywords")
+        plt.ylabel("TF-IDF Score")
+        plt.title(f"Top {top_n} Keyword Distribution Comparison")
+        plt.xticks(indices + width / 2, combined_keywords, rotation=45, ha="right")
+        plt.legend()
+        st.pyplot(plt)
 
-    # Display top keywords and scores
-    st.subheader(f"Top {top_n} Keywords")
-    st.write("**Our Website:**")
-    st.write(pd.DataFrame({"Keyword": top_our_keywords, "TF-IDF Score": top_our_values}))
-    st.write("**Competitor Website:**")
-    st.write(pd.DataFrame({"Keyword": top_comp_keywords, "TF-IDF Score": top_comp_values}))
+        # Display top keywords and scores
+        st.subheader(f"Top {top_n} Keywords")
+        st.write("**Our Website:**")
+        st.write(pd.DataFrame({"Keyword": top_our_keywords, "TF-IDF Score": top_our_values}))
+        st.write("**Competitor Website:**")
+        st.write(pd.DataFrame({"Keyword": top_comp_keywords, "TF-IDF Score": top_comp_values}))
 
-    return gemini_response
+        return gemini_response
 
     # Function: Compute Cosine Similarity
     def compute_cosine_similarity(tfidf_matrix):
