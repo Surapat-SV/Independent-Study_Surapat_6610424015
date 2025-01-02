@@ -289,44 +289,51 @@ elif page == "Keyword Planner":
 elif page == "Ads Generation":
     st.subheader("Ads Generation - Coming Soon")
 # Keyword to use in the ads
-    keyword = "เรียนภาษาอังกฤษ"
+keyword = "เรียนภาษาอังกฤษ"
 
-    # Function to generate text ads using Gemini
-    def generate_text_ads(prompt, max_tokens=50):
-        try:
-            response = genai.chat(prompt=prompt, max_tokens=max_tokens)
-            return response['text'] if 'text' in response else "Error generating text"
-        except Exception as e:
-            return f"Error: {e}"
+# Function to generate text ads using Gemini
+def generate_text_ads(prompt, max_tokens=50):
+    try:
+        response = genai.generate_text(
+            prompt=prompt,
+            max_output_tokens=max_tokens,
+            temperature=0.7,  # Adjust for creativity
+        )
+        return response.candidates[0]['output'] if response.candidates else "Error generating text"
+    except Exception as e:
+        return f"Error: {e}"
 
-    # Headline Section
-    st.subheader("Headline")
-    for i in range(1, 4):
-        # Prompt for the headline
-        headline_prompt = f"Generate a short headline (max 30 characters) containing the keyword: {keyword}"
-        headline = generate_text_ads(headline_prompt, max_tokens=30)
+# Title
+st.title("Ads Generation")
 
-        col1, col2 = st.columns([5, 1])
-        with col1:
-            st.text_input(f"Headline {i}", value=headline, key=f"headline_{i}")
-        with col2:
-            if st.button("Copy", key=f"copy_headline_{i}"):
-                st.write(f"Copied: {headline}")
-                st.experimental_set_query_params(copied=headline)
+# Headline Section
+st.subheader("Headline")
+for i in range(1, 4):
+    # Prompt for the headline
+    headline_prompt = f"Generate a short headline (max 30 characters) containing the keyword: {keyword}"
+    headline = generate_text_ads(headline_prompt, max_tokens=30)
 
-    # Description Section
-    st.subheader("Description")
-    for i in range(1, 4):
-        # Prompt for the description
-        description_prompt = f"Generate a short description (max 90 characters) containing the keyword: {keyword}"
-        description = generate_text_ads(description_prompt, max_tokens=90)
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.text_input(f"Headline {i}", value=headline, key=f"headline_{i}")
+    with col2:
+        if st.button("Copy", key=f"copy_headline_{i}"):
+            st.write(f"Copied: {headline}")
+            st.experimental_set_query_params(copied=headline)
 
-        col1, col2 = st.columns([5, 1])
-        with col1:
-            st.text_input(f"Description {i}", value=description, key=f"description_{i}")
-        with col2:
-            if st.button("Copy", key=f"copy_description_{i}"):
-                st.write(f"Copied: {description}")
-                st.experimental_set_query_params(copied=description)
+# Description Section
+st.subheader("Description")
+for i in range(1, 4):
+    # Prompt for the description
+    description_prompt = f"Generate a short description (max 90 characters) containing the keyword: {keyword}"
+    description = generate_text_ads(description_prompt, max_tokens=90)
 
-    st.caption("All fields are generated using Gemini and include the keyword: เรียนภาษาอังกฤษ")
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.text_input(f"Description {i}", value=description, key=f"description_{i}")
+    with col2:
+        if st.button("Copy", key=f"copy_description_{i}"):
+            st.write(f"Copied: {description}")
+            st.experimental_set_query_params(copied=description)
+
+st.caption("All fields are generated using Gemini and include the keyword: เรียนภาษาอังกฤษ")
