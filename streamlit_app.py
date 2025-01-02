@@ -49,72 +49,73 @@ questions = [
     "Please provide any other necessary information about your business."
 ]
 
-# Display chat history
-st.subheader("Business Understanding Agent - Chatbot")
-for role, message in st.session_state.chat_history:
-    st.chat_message(role).markdown(message)
+if page == "Business Understanding Agent":
+    # Display chat history
+    st.subheader("Business Understanding Agent - Chatbot")
+    for role, message in st.session_state.chat_history:
+        st.chat_message(role).markdown(message)
 
-# Greeting message if the chat starts
-if st.session_state.question_index == 0:
-    greeting = "Hello! My name is N'Assist, your new intern. I'll help you define your target audience."
-    st.session_state.chat_history.append(("assistant", greeting))
-    st.chat_message("assistant").markdown(greeting)
+    # Greeting message if the chat starts
+    if st.session_state.question_index == 0:
+        greeting = "Hello! My name is N'Assist, your new intern. I'll help you define your target audience."
+        st.session_state.chat_history.append(("assistant", greeting))
+        st.chat_message("assistant").markdown(greeting)
 
-# Ask the current question
-if st.session_state.question_index < len(questions):
-    current_question = questions[st.session_state.question_index]
-    st.session_state.chat_history.append(("assistant", current_question))
-    st.chat_message("assistant").markdown(current_question)
+    # Ask the current question
+    if st.session_state.question_index < len(questions):
+        current_question = questions[st.session_state.question_index]
+        st.session_state.chat_history.append(("assistant", current_question))
+        st.chat_message("assistant").markdown(current_question)
 
-    # Chat input for user response
-    user_input = st.chat_input("Your response...")
-    if user_input:
-        # Save user input and progress to the next question
-        st.session_state.chat_history.append(("user", user_input))
-        st.chat_message("user").markdown(user_input)
+        # Chat input for user response
+        user_input = st.chat_input("Your response...")
+        if user_input:
+            # Save user input and progress to the next question
+            st.session_state.chat_history.append(("user", user_input))
+            st.chat_message("user").markdown(user_input)
 
-        # Save responses based on the question index
-        if st.session_state.question_index == 0:
-            st.session_state.business_data["Business Name"] = user_input
-        elif st.session_state.question_index == 1:
-            st.session_state.business_data["Product/Service"] = user_input
-        elif st.session_state.question_index == 2:
-            st.session_state.business_data["Location"] = user_input
-        elif st.session_state.question_index == 3:
-            st.session_state.business_data["Necessary Information"] = user_input
+            # Save responses based on the question index
+            if st.session_state.question_index == 0:
+                st.session_state.business_data["Business Name"] = user_input
+            elif st.session_state.question_index == 1:
+                st.session_state.business_data["Product/Service"] = user_input
+            elif st.session_state.question_index == 2:
+                st.session_state.business_data["Location"] = user_input
+            elif st.session_state.question_index == 3:
+                st.session_state.business_data["Necessary Information"] = user_input
 
-        # Move to the next question
-        st.session_state.question_index += 1
+            # Move to the next question
+            st.session_state.question_index += 1
 
-# Final summary after all questions
-if st.session_state.question_index == len(questions):
-    summary_message = (
-        "Thank you for providing the details! Here's the summary of your business information:"
-    )
-    st.session_state.chat_history.append(("assistant", summary_message))
-    st.chat_message("assistant").markdown(summary_message)
-
-    # Extract details about target audience using Gemini (if API key is provided)
-    if gemini_api_key:
-        prompt = (
-            f"Based on the following details, define the target audience:\n"
-            f"Business Name: {st.session_state.business_data['Business Name']}\n"
-            f"Product/Service: {st.session_state.business_data['Product/Service']}\n"
-            f"Location: {st.session_state.business_data['Location']}\n"
-            f"Necessary Information: {st.session_state.business_data['Necessary Information']}"
+    # Final summary after all questions
+    if st.session_state.question_index == len(questions):
+        summary_message = (
+            "Thank you for providing the details! Here's the summary of your business information:"
         )
-        try:
-            response = model.generate_content(prompt)
-            gemini_response = response.text
-            st.session_state.business_data["Target Audience"] = gemini_response
-            st.session_state.chat_history.append(("assistant", gemini_response))
-            st.chat_message("assistant").markdown(gemini_response)
-        except Exception as e:
-            st.error(f"An error occurred while using Gemini: {e}")
+        st.session_state.chat_history.append(("assistant", summary_message))
+        st.chat_message("assistant").markdown(summary_message)
 
-    # Display the saved business information
-    st.subheader("Saved Information")
-    st.json(st.session_state.business_data)
+        # Extract details about target audience using Gemini (if API key is provided)
+        if gemini_api_key:
+            prompt = (
+                f"Based on the following details, define the target audience:\n"
+                f"Business Name: {st.session_state.business_data['Business Name']}\n"
+                f"Product/Service: {st.session_state.business_data['Product/Service']}\n"
+                f"Location: {st.session_state.business_data['Location']}\n"
+                f"Necessary Information: {st.session_state.business_data['Necessary Information']}"
+            )
+            try:
+                response = model.generate_content(prompt)
+                gemini_response = response.text
+                st.session_state.business_data["Target Audience"] = gemini_response
+                st.session_state.chat_history.append(("assistant", gemini_response))
+                st.chat_message("assistant").markdown(gemini_response)
+            except Exception as e:
+                st.error(f"An error occurred while using Gemini: {e}")
+
+        # Display the saved business information
+        st.subheader("Saved Information")
+        st.json(st.session_state.business_data)
 
 elif page == "Web Scraper Agent - SEM Planner":
     st.subheader("Compare Keywords and Generate SEM Checklist")
@@ -188,27 +189,27 @@ elif page == "Web Scraper Agent - SEM Planner":
 
         return gemini_response
 
-# Function: Compute Cosine Similarity
-def compute_cosine_similarity(tfidf_matrix):
-    # Compute cosine similarity between two vectors
-    cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    return cosine_sim
+    # Function: Compute Cosine Similarity
+    def compute_cosine_similarity(tfidf_matrix):
+        # Compute cosine similarity between two vectors
+        cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        return cosine_sim
 
-# Function: Interpret Similarity Using Gemini
-def interpret_similarity_with_gemini(similarity):
-    prompt = f"""
-    Analyze the following cosine similarity value ({similarity:.2f}) between two sets of keywords.
-    Provide an interpretation of whether this value indicates high, medium, or low similarity and what this means in the context of SEM (Search Engine Marketing).
-    """
-    try:
-        response = model.generate_content(prompt)
-        interpretation = response.text
-    except Exception as e:
-        st.error(f"Gemini API Error: {e}")
-        return "Error occurred while interpreting similarity."
-    return interpretation
+    # Function: Interpret Similarity Using Gemini
+    def interpret_similarity_with_gemini(similarity):
+        prompt = f"""
+        Analyze the following cosine similarity value ({similarity:.2f}) between two sets of keywords.
+        Provide an interpretation of whether this value indicates high, medium, or low similarity and what this means in the context of SEM (Search Engine Marketing).
+        """
+        try:
+            response = model.generate_content(prompt)
+            interpretation = response.text
+        except Exception as e:
+            st.error(f"Gemini API Error: {e}")
+            return "Error occurred while interpreting similarity."
+        return interpretation
 
-        # Process URLs
+    # Process URLs
     if st.button("Analyze Websites"):
         if our_url and competitor_url:
             our_soup = fetch_html(our_url)
@@ -243,7 +244,6 @@ def interpret_similarity_with_gemini(similarity):
                 st.error("Failed to fetch HTML content from one or both URLs.")
         else:
             st.warning("Please enter both URLs to proceed.")
-
 
 elif page == "Keyword Planner":
     st.subheader("Keyword Planner - Coming Soon")
