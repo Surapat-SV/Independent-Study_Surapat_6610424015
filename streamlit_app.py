@@ -208,41 +208,42 @@ def interpret_similarity_with_gemini(similarity):
         return "Error occurred while interpreting similarity."
     return interpretation
 
-    # Process URLs
-   if st.button("Analyze Websites"):
-    if our_url and competitor_url:
-        our_soup = fetch_html(our_url)
-        competitor_soup = fetch_html(competitor_url)
+        # Process URLs
+    if st.button("Analyze Websites"):
+        if our_url and competitor_url:
+            our_soup = fetch_html(our_url)
+            competitor_soup = fetch_html(competitor_url)
 
-        if our_soup and competitor_soup:
-            # Extract and preprocess keywords
-            our_tokens = extract_keywords_with_pythainlp(our_soup)
-            comp_tokens = extract_keywords_with_pythainlp(competitor_soup)
+            if our_soup and competitor_soup:
+                # Extract and preprocess keywords
+                our_tokens = extract_keywords_with_pythainlp(our_soup)
+                comp_tokens = extract_keywords_with_pythainlp(competitor_soup)
 
-            # Compute TF-IDF
-            tfidf_matrix, feature_names = compute_tfidf(our_tokens, comp_tokens)
+                # Compute TF-IDF
+                tfidf_matrix, feature_names = compute_tfidf(our_tokens, comp_tokens)
 
-            # Compute Cosine Similarity
-            cosine_sim = compute_cosine_similarity(tfidf_matrix)
+                # Compute Cosine Similarity
+                cosine_sim = compute_cosine_similarity(tfidf_matrix)
 
-            # Interpret similarity using Gemini
-            similarity_interpretation = interpret_similarity_with_gemini(cosine_sim)
+                # Interpret similarity using Gemini
+                similarity_interpretation = interpret_similarity_with_gemini(cosine_sim)
 
-            # Gemini Analysis and Plot
-            gemini_analysis = gemini_analyze_and_plot(our_tokens, comp_tokens, tfidf_matrix, feature_names)
+                # Gemini Analysis and Plot
+                gemini_analysis = gemini_analyze_and_plot(our_tokens, comp_tokens, tfidf_matrix, feature_names)
 
-            # Display results
-            st.subheader("Cosine Similarity")
-            st.write(f"**Cosine Similarity Score:** {cosine_sim:.2f}")
-            st.write(f"**Gemini Interpretation:** {similarity_interpretation}")
+                # Display results
+                st.subheader("Cosine Similarity")
+                st.write(f"**Cosine Similarity Score:** {cosine_sim:.2f}")
+                st.write(f"**Gemini Interpretation:** {similarity_interpretation}")
 
-            if gemini_analysis:
-                st.subheader("Gemini Analysis Recommendations")
-                st.write(gemini_analysis)
+                if gemini_analysis:
+                    st.subheader("Gemini Analysis Recommendations")
+                    st.write(gemini_analysis)
+            else:
+                st.error("Failed to fetch HTML content from one or both URLs.")
         else:
-            st.error("Failed to fetch HTML content from one or both URLs.")
-    else:
-        st.warning("Please enter both URLs to proceed.")
+            st.warning("Please enter both URLs to proceed.")
+
 
 elif page == "Keyword Planner":
     st.subheader("Keyword Planner - Coming Soon")
