@@ -6,6 +6,11 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import google.generativeai as genai
 import json
+import matplotlib.pyplot as plt
+from pythainlp import word_tokenize
+from pythainlp.corpus.common import thai_stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
 
 # Capture Gemini API Key
 gemini_api_key = st.text_input("Gemini API Key:", placeholder="Type your API Key here...", type="password")
@@ -132,48 +137,56 @@ elif page == "Web Scraper Agent - SEM Planner":
             st.error(f"Error fetching {url}: {e}")
             return None
 
-    # Function: Extract Meta Tags
-    def extract_meta_data(soup):
-        title = soup.title.string if soup.title else "No Title"
-        description = ""
-        meta_desc = soup.find("meta", attrs={"name": "description"})
-        if meta_desc:
-            description = meta_desc.get("content", "")
-        return title, description
-
-    # Function: Extract Keywords
-    def extract_keywords(soup):
+    # Function: Extract and preprocess keywords using PyThaiNLP
+    def extract_keywords_with_pythainlp(soup):
         texts = soup.get_text().lower()
-        words = pd.Series(texts.split())
-        stopwords = set(["the", "is", "and", "to", "in", "of", "a", "on", "with", "for", "this", "that", "it", "as"])
-        keywords = words[~words.isin(stopwords)].value_counts().head(20)
-        return keywords
+        tokens = word_tokenize(texts)
+        stopwords = set(thai_stopwords())
+        filtered_tokens = [word for word in tokens if word not in stopwords and len(word) > 1]
+        return filtered_tokens
 
-    # Function: Compute Cosine Similarity
-    def compute_similarity(our_text, competitor_text):
-        vectorizer = CountVectorizer().fit_transform([our_text, competitor_text])
-        vectors = vectorizer.toarray()
-        similarity = cosine_similarity([vectors[0]], [vectors[1]])[0][0]
-        return similarity
+    # Function: Compute TF-IDF
+    def compute_tfidf(our_tokens, comp_tokens):
+        corpus = [' '.join(our_tokens), ' '.join(comp_tokens)]
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(corpus)
+        feature_names = vectorizer.get_feature_names_out()
+        return tfidf_matrix, feature_names
 
-    # Gemini Analysis for SEM Checklist
-    def analyze_with_gemini(our_meta, comp_meta, our_keywords, comp_keywords):
+    # Function: Generate Gemini Analysis and Plot Graph
+    def gemini_analyze_and_plot(our_keywords, comp_keywords, tfidf_matrix, feature_names):
         prompt = f"""
-        Analyze and compare the following website metadata and keywords for SEM planning:
-        Our Website:
-        Title: {our_meta[0]}
-        Description: {our_meta[1]}
-        Keywords: {', '.join(our_keywords.index)}
-
-        Competitor Website:
-        Title: {comp_meta[0]}
-        Description: {comp_meta[1]}
-        Keywords: {', '.join(comp_keywords.index)}
-
-        Provide insights, recommendations, and identify gaps to improve SEM strategies.
+        Compare the following keyword distributions for SEM planning:
+        Our Website Keywords: {', '.join(our_keywords[:20])}
+        Competitor Website Keywords: {', '.join(comp_keywords[:20])}
+        
+        Provide insights, recommendations, and visualize the keyword distribution differences.
         """
-        response = model.generate_content(prompt)
-        return response.text
+        try:
+            response = model.generate_content(prompt)
+            gemini_response = response.text
+        except Exception as e:
+            st.error(f"Gemini API Error: {e}")
+            return None
+
+        # Generate a plot for keyword distribution
+        tfidf_scores = tfidf_matrix.toarray()
+        our_scores = tfidf_scores[0]
+        comp_scores = tfidf_scores[1]
+        
+        plt.figure(figsize=(10, 6))
+        indices = np.arange(len(feature_names))
+        width = 0.35
+        plt.bar(indices, our_scores, width, label="Our Website")
+        plt.bar(indices + width, comp_scores, width, label="Competitor Website")
+        plt.xlabel("Keywords")
+        plt.ylabel("TF-IDF Score")
+        plt.title("Keyword Distribution Comparison")
+        plt.xticks(indices + width / 2, feature_names, rotation=90)
+        plt.legend()
+        st.pyplot(plt)
+
+        return gemini_response
 
     # Process URLs
     if st.button("Analyze Websites"):
@@ -182,30 +195,16 @@ elif page == "Web Scraper Agent - SEM Planner":
             competitor_soup = fetch_html(competitor_url)
 
             if our_soup and competitor_soup:
-                our_meta = extract_meta_data(our_soup)
-                comp_meta = extract_meta_data(competitor_soup)
-                our_keywords = extract_keywords(our_soup)
-                comp_keywords = extract_keywords(competitor_soup)
-                similarity = compute_similarity(' '.join(our_keywords.index), ' '.join(comp_keywords.index))
-                gemini_analysis = analyze_with_gemini(our_meta, comp_meta, our_keywords, comp_keywords)
+                our_tokens = extract_keywords_with_pythainlp(our_soup)
+                comp_tokens = extract_keywords_with_pythainlp(competitor_soup)
+                
+                tfidf_matrix, feature_names = compute_tfidf(our_tokens, comp_tokens)
+                
+                gemini_analysis = gemini_analyze_and_plot(our_tokens, comp_tokens, tfidf_matrix, feature_names)
 
-                st.subheader("Metadata Analysis")
-                st.write(f"**Our Title:** {our_meta[0]}")
-                st.write(f"**Our Description:** {our_meta[1]}")
-                st.write(f"**Competitor Title:** {comp_meta[0]}")
-                st.write(f"**Competitor Description:** {comp_meta[1]}")
-
-                st.subheader("Keyword Analysis")
-                st.write("**Our Top Keywords:")
-                st.write(our_keywords)
-                st.write("**Competitor Top Keywords:")
-                st.write(comp_keywords)
-
-                st.subheader("Comparison Results")
-                st.write(f"**Keyword Similarity (Cosine):** {similarity:.2f}")
-
-                st.subheader("Gemini Analysis Recommendations")
-                st.write(gemini_analysis)
+                if gemini_analysis:
+                    st.subheader("Gemini Analysis Recommendations")
+                    st.write(gemini_analysis)
             else:
                 st.error("Failed to fetch HTML content from one or both URLs.")
         else:
