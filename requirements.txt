@@ -1,4 +1,5 @@
 streamlit
+streamlit_option_menu
 crewai
 crewai_tools
 langchain_community
