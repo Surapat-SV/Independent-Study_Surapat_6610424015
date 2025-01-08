@@ -1,113 +1,78 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+###############################################
+# Keyword Planner Page
+# File: pages/page_03_keyword_planner.py
+# Purpose: Provides Streamlit interface for Keyword Planner tasks
+###############################################
 
-from crewai import Crew
-from agents.website_analyst_agents import WebsiteAnalystAgents, StreamToExpander
-from tasks.website_analyst_tasks import WebsiteAnalystTasks
-from agents.keyword_planner_agents import KeywordPlannerAgents, StreamToExpander
-from tasks.keyword_planner_tasks import KeywordPlannerTasks
-import streamlit as st
-import datetime
+# Import SQLite compatibility fix for GitHub environment
+__import__('pysqlite3')  # Ensure SQLite works in certain environments
 import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')  # Replace sqlite3 with pysqlite3
 
+# Import required libraries
+import streamlit as st  # Streamlit for UI handling
+from crewai import Crew  # CrewAI framework for handling agents and tasks
+from agents.agent_03_keyword_planner import KeywordPlannerAgents  # Import Keyword Planner agents
+from tasks.task_03_keyword_planner import KeywordPlannerTasks  # Import Keyword Planner tasks
+
+# Function: Run Keyword Planner Page
 def run_keyword_planner():
     """
-    Displays the Keyword Planner page where users can input keywords or topics to analyze.
+    Streamlit interface for Keyword Planner tasks:
+    - Allows users to input keywords for analysis.
+    - Generates keyword plans based on SEM strategies.
     """
-    # Set up the header and UI
-    st.header("Keyword Planner")
+    # Page Title
+    st.title("🔑 Keyword Planner")
     st.markdown("Create and analyze keyword plans to optimize your SEM campaigns.")
 
-    # Input fields
+    # Collect user input
     query_input = st.text_input(
-        "Keyword Query Input:", placeholder="Enter keywords or topics to analyze."
-    )
-    competitor_url = st.text_input(
-        "Competitor Website URL:", placeholder="Enter competitor's website URL (Optional)."
+        "Enter Keywords or Topics:", placeholder="Enter keywords or topics to analyze."
     )
 
-    # Button to generate Keyword Planner
+    # Generate Keyword Plan Button
     if st.button("Generate Keyword Plan"):
-        # Display processing status
-        with st.status("🔍 **Generating Keyword Plan...**", state="running", expanded=True) as status:
-            with st.container(height=500, border=False):
-                # Initialize output logger
-                sys.stdout = StreamToExpander(st)
+        # Validate inputs
+        if query_input:
+            try:
+                # Step 1: Initialize agents and tasks
+                agents = KeywordPlannerAgents()
+                tasks = KeywordPlannerTasks()
+                keyword_planner = agents.keyword_planner_agent()
 
-                try:
-                    # Initialize agents and tasks
-                    agents = KeywordPlannerAgents()
-                    tasks = KeywordPlannerTasks()
+                # Step 2: Create tasks for keyword discovery and categorization
+                discovery_task = tasks.keyword_discovery_task(keyword_planner, query_input)
+                categorization_task = tasks.keyword_categorization_task(keyword_planner, [query_input])
+                trend_task = tasks.keyword_trend_analysis_task(keyword_planner, query_input)
 
-                    # Create agents
-                    keyword_planner = agents.keyword_planner_agent()
-                    competitor_analyst = agents.web_analyst_agent()
+                # Step 3: Create Crew and execute tasks
+                crew = Crew(
+                    agents=[keyword_planner],
+                    tasks=[discovery_task, categorization_task, trend_task],
+                    verbose=True,
+                )
+                results = crew.kickoff()
 
-                    # Create tasks
-                    keyword_discovery_task = tasks.keyword_discovery_task(keyword_planner, query_input)
-                    keyword_categorization_task = tasks.keyword_categorization_task(keyword_planner, [query_input])
+                # Step 4: Display results
+                st.subheader("Keyword Plan Report")
+                for i, result in enumerate(results):
+                    st.markdown(f"### Task {i + 1} Output")
+                    st.write(result)
 
-                    # Optional: Competitor Analysis if URL is provided
-                    competitor_analysis_task = None
-                    if competitor_url:
-                        competitor_analysis_task = tasks.keyword_competitor_analysis_task(
-                            competitor_analyst, query_input, competitor_url
-                        )
+                # Key Recommendations
+                st.subheader("Key Recommendations")
+                st.markdown("""
+                - **Focus on Keyword Gaps:** Target missing keywords for SEM improvement.
+                - **Use Negative Keywords:** Reduce irrelevant traffic and ad spend.
+                - **Ad Group Structuring:** Group keywords into themes for targeted ads.
+                - **Optimize Metadata:** Enhance descriptions and headlines based on findings.
+                """)
 
-                    # Negative Keyword Task
-                    negative_keywords_task = tasks.negative_keyword_identification_task(keyword_planner, [query_input])
+            except Exception as e:
+                st.error(f"An error occurred while generating the keyword plan: {str(e)}")
+        else:
+            # Warning if inputs are incomplete
+            st.warning("Please provide keywords or topics for analysis.")
 
-                    # Grouping and Mapping Task
-                    keyword_grouping_task = tasks.keyword_grouping_task(keyword_planner, [query_input])
-
-                    # Final Report Task
-                    final_report_task = tasks.final_keyword_planner_task(keyword_planner)
-
-                    # Create crew and execute tasks
-                    crew_tasks = [
-                        keyword_discovery_task,
-                        keyword_categorization_task,
-                        negative_keywords_task,
-                        keyword_grouping_task,
-                        final_report_task,
-                    ]
-
-                    # Add competitor analysis task if available
-                    if competitor_analysis_task:
-                        crew_tasks.insert(2, competitor_analysis_task)
-
-                    # Initialize the crew
-                    crew = Crew(
-                        agents=[keyword_planner, competitor_analyst],
-                        tasks=crew_tasks,
-                        verbose=True,
-                    )
-
-                    # Execute tasks
-                    results = crew.kickoff()
-                    status.update(label="✅ Keyword Plan Ready!", state="complete", expanded=False)
-
-                    # Display Results
-                    st.subheader("Keyword Plan Report")
-                    for i, result in enumerate(results):
-                        st.markdown(f"### Task {i + 1} Output")
-                        st.write(result)
-
-                    # Additional Insights
-                    st.subheader("Key Recommendations")
-                    st.markdown("""
-                    - **Focus on Keyword Gaps:** Optimize SEM performance by targeting missing keywords.
-                    - **Use Negative Keywords:** Filter irrelevant traffic and reduce ad spend.
-                    - **Ad Group Structuring:** Group keywords into tightly themed groups for targeted ads.
-                    - **Optimize Metadata:** Enhance ad copy and descriptions based on findings.
-                    """)
-
-                except Exception as e:
-                    # Handle errors gracefully
-                    st.error(f"An error occurred while generating the keyword plan: {str(e)}")
-
-    # Clear session data
-    if st.button("Clear Inputs"):
-        st.session_state.clear()
-        st.rerun()
+# End of file: pages/page_03_keyword_planner.py
