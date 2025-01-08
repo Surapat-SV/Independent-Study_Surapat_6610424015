@@ -1,4 +1,12 @@
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import streamlit as st
+import os
+from crewai import Agent, Task, Crew, LLM
+from crewai_tools import SerperDevTool
+
 from agents.agent_01_business_analyst import create_business_analyst_agents
 from tasks.task_01_business_analyst import create_business_analyst_tasks
 
