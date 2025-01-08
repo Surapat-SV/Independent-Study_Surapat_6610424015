@@ -21,10 +21,10 @@ from tasks.task_03_business_analyst import KeywordPlannerTasks
 from tasks.task_04_business_analyst import  AdCopyWriterTasks
 
 # Import views for modular UI handling
-from pages.business_analyst import run_business_analyst
-from pages.web_analyst import run_web_analyst
-from pages.keyword_planner import run_keyword_planner
-from pages.ad_copywriter import run_ad_copywriter
+from pages.page_01_business_analyst import run_business_analyst
+from pages.page_02_web_analyst import run_web_analyst
+from pages.page_03_keyword_planner import run_keyword_planner
+from pages.page_04_ad_copywriter import run_ad_copywriter
 
 # Set Streamlit page configuration
 st.set_page_config(
