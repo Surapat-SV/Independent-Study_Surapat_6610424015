@@ -1,7 +1,11 @@
-from crewai import Agent
-from langchain_community.llms import LLM
-from tools.search_tools import SerperDevTool
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import streamlit as st
+import os
+from crewai import Agent
+from crewai_tools import SerperDevTool
 
 def create_business_analyst_agents():
     # Access API keys from st.secrets
