@@ -12,7 +12,7 @@ def create_business_analyst_agents():
     llm = LLM(
         model="gemini/gemini-1.5-flash",
         api_key=gemini_api_key,
-        temperature=0.7
+        temperature=0.1
     )
 
     # Initialize SerperDevTool with Serper API key
