@@ -27,7 +27,7 @@ from tasks.task_03_keyword_planner import KeywordPlannerTasks
 from tasks.task_04_adcopy_writer import AdCopyWriterTasks
 
 # Import views for modular UI handling
-from pages.page_01_business_analyst import run_business_analyst
+from src.pages.page_01_business_analyst import run_business_analyst
 from pages.page_02_web_analyst import run_web_analyst
 from pages.page_03_keyword_planner import run_keyword_planner
 from pages.page_04_ad_copywriter import run_ad_copywriter
