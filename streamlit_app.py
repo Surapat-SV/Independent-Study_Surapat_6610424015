@@ -9,21 +9,16 @@ from streamlit_option_menu import option_menu
 import streamlit as st
 
 # Import modularized Agents
-from sem_agents import (
-    BusinessAnalystAgents,
-    WebsiteAnalystAgents,
-    KeywordPlannerAgents,
-    AdcopyWriterAgents,
-    StreamToExpander  # For logging outputs
-)
+from agent_01_business_analyst import BusinessAnalystAgents
+from agent_02_business_analyst import WebsiteAnalystAgents
+from agent_03_business_analyst import KeywordPlannerAgents
+from agent_04_business_analyst import  AdCopyWriterAgents
 
 # Import modularized Tasks
-from sem_tasks import (
-    BusinessAnalystTasks,
-    WebsiteAnalystTasks,
-    KeywordPlannerTasks,
-    AdCopyWriterTasks
-)
+from task_01_business_analyst import BusinessAnalystTasks
+from task_02_business_analyst import WebsiteAnalystTasks
+from task_03_business_analyst import KeywordPlannerTasks
+from task_04_business_analyst import  AdCopyWriterTasks
 
 # Import views for modular UI handling
 from pages.business_analyst import run_business_analyst
