@@ -14,7 +14,7 @@ import streamlit as st  # Streamlit for UI handling
 from crewai import Crew  # CrewAI framework for handling agents and tasks
 
 # Import Business Analyst agents and tasks
-from agents.agent_01_business_analyst import create_business_analyst_agents
+from src.agents.agent_01_business_analyst import create_business_analyst_agents
 from tasks.task_01_business_analyst import create_business_analyst_tasks
 
 # Function: Run Business Analyst Page
