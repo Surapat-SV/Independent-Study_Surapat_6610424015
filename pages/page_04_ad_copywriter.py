@@ -1,73 +1,64 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+###############################################
+# Ad Copywriter Page
+# File: pages/page_04_ad_copywriter.py
+# Purpose: Provides Streamlit interface for generating SEM text ads
+###############################################
 
-from crewai import Crew
-from agents.adcopy_writer_agents import AdcopyWriterAgents
-from tasks.adcopy_writer_tasks import AdCopyWriterTasks
-import streamlit as st
-import datetime
+# Import SQLite compatibility fix for GitHub environment
+__import__('pysqlite3')  # Ensure SQLite works in certain environments
 import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')  # Replace sqlite3 with pysqlite3
 
+# Import required libraries
+import streamlit as st  # Streamlit for UI handling
+from crewai import Crew  # CrewAI framework for handling agents and tasks
+from agents.agent_04_adcopywriter import AdcopyWriterAgents  # Import Ad Copywriter agents
+from tasks.task_04_adcopy_writer import AdCopyWriterTasks  # Import Ad Copywriter tasks
+
+# Function: Run Ad Copywriter Page
 def run_ad_copywriter():
     """
-    Displays the Ad Copywriter page where users can generate SEM text ads.
+    Streamlit interface for Ad Copywriter tasks:
+    - Generates SEM text ads with headlines and descriptions.
     """
-    # Header and description
-    st.header("Ad Copywriter")
+    # Page Title
+    st.title("✍️ Ad Copywriter")
     st.markdown("Generate compelling Google Ads text, including headlines and descriptions, for SEM campaigns.")
 
     # Button to trigger text ad generation
     if st.button("Generate Text Ads"):
-        # Display status indicator while generating ads
-        with st.status("✍️ **Generating Text Ads...**", state="running", expanded=True) as status:
-            with st.container(height=500, border=False):
-                # Initialize output logger
-                sys.stdout = StreamToExpander(st)
+        try:
+            # Step 1: Initialize agents and tasks
+            agents = AdcopyWriterAgents()
+            tasks = AdCopyWriterTasks()
+            ad_copywriter = agents.adcopy_writer_agent()
 
-                try:
-                    # Initialize agents and tasks
-                    agents = AdcopyWriterAgents()
-                    tasks = AdCopyWriterTasks()
+            # Step 2: Create Ad Copywriting Task
+            ad_copywriter_task = tasks.ad_copywriter_task(ad_copywriter)
 
-                    # Create ad copywriter agent and task
-                    ad_copywriter = agents.adcopy_writer_agent()
-                    ad_copywriter_task = tasks.ad_copywriter_task(ad_copywriter)
+            # Step 3: Create Crew and execute tasks
+            crew = Crew(
+                agents=[ad_copywriter],
+                tasks=[ad_copywriter_task],
+                verbose=True
+            )
+            result = crew.kickoff()
 
-                    # Combine agents and tasks into a crew
-                    crew = Crew(
-                        agents=[ad_copywriter],
-                        tasks=[ad_copywriter_task],
-                        verbose=True
-                    )
+            # Step 4: Display Results
+            st.subheader("Generated Text Ads")
 
-                    # Execute tasks
-                    result = crew.kickoff()
-                    status.update(label="✅ Text Ads Ready!", state="complete", expanded=False)
+            # Display headlines
+            st.markdown("### Headlines:")
+            for i, headline in enumerate(result.get('headlines', []), start=1):
+                st.write(f"{i}. {headline}")
 
-                    # Display Results
-                    st.subheader("Generated Text Ads", anchor=False, divider="rainbow")
+            # Display descriptions
+            st.markdown("### Descriptions:")
+            for i, description in enumerate(result.get('descriptions', []), start=1):
+                st.write(f"{i}. {description}")
 
-                    # Parse and format the results
-                    st.markdown("### Headlines:")
-                    if isinstance(result, dict) and 'headlines' in result:
-                        for i, headline in enumerate(result['headlines'], start=1):
-                            st.write(f"{i}. {headline}")
-                    else:
-                        st.write("No headlines were generated.")
+        except Exception as e:
+            # Handle errors
+            st.error(f"An error occurred while generating text ads: {str(e)}")
 
-                    st.markdown("### Descriptions:")
-                    if isinstance(result, dict) and 'descriptions' in result:
-                        for i, description in enumerate(result['descriptions'], start=1):
-                            st.write(f"{i}. {description}")
-                    else:
-                        st.write("No descriptions were generated.")
-
-                except Exception as e:
-                    # Error handling
-                    st.error(f"An error occurred while generating text ads: {str(e)}")
-
-    # Clear session data
-    if st.button("Clear Inputs"):
-        st.session_state.clear()
-        st.rerun()
+# End of file: pages/page_04_ad_copywriter.py
