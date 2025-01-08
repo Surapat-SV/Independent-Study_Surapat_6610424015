@@ -40,6 +40,14 @@ st.set_page_config(
     page_icon="🧠"  # Icon for the app
 )
 
+# Set Streamlit page configuration
+st.set_page_config(
+    layout="wide", 
+    initial_sidebar_state="expanded", 
+    page_title="SEM Planner - AI Powered App", 
+    page_icon="🧠"
+)
+
 # Sidebar Header and App Info
 st.sidebar.title("SEM Planner - AI Powered App")
 st.sidebar.info(
@@ -52,16 +60,16 @@ st.sidebar.info(
     """
 )
 
-# Sidebar Menu for Navigation
+# Sidebar Menu
 with st.sidebar:
     selected = option_menu(
-        "Navigation Menu",  # Menu title
-        ["Business Analyst", "Web Analyst", "Keyword Planner", "Ad Copywriter"],  # Menu options
-        icons=["briefcase", "globe", "key", "pencil"],  # Icons for each menu item
-        default_index=0  # Default selection
+        "Navigation Menu",
+        ["Business Analyst", "Web Analyst", "Keyword Planner", "Ad Copywriter"],
+        icons=["briefcase", "globe", "key", "pencil"],
+        default_index=0
     )
 
-# Route to the selected module based on the menu selection
+# Route to the selected module
 if selected == "Business Analyst":
     st.header("📋 Business Analyst")
     run_business_analyst()
