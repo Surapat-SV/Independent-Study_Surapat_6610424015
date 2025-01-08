@@ -14,6 +14,18 @@ from crewai import Crew  # CrewAI framework for agents and tasks
 from streamlit_option_menu import option_menu  # Sidebar navigation menu
 import streamlit as st  # Streamlit for UI rendering
 
+# Import modularized Agents
+from agents.agent_01_business_analyst import BusinessAnalystAgents
+from agents.agent_02_website_analyst import WebsiteAnalystAgents
+from agents.agent_03_keyword_planner import KeywordPlannerAgents
+from agents.agent_04_adcopywriter import AdcopyWriterAgents
+
+# Import modularized Tasks
+from tasks.task_01_business_analyst import BusinessAnalystTasks
+from tasks.task_02_website_analyst import WebsiteAnalystTasks
+from tasks.task_03_keyword_planner import KeywordPlannerTasks
+from tasks.task_04_adcopy_writer import AdCopyWriterTasks
+
 # Import views for modular UI handling
 from pages.page_01_business_analyst import run_business_analyst
 from pages.page_02_web_analyst import run_web_analyst
