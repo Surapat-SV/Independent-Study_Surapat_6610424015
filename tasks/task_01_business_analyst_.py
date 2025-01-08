@@ -1,4 +1,11 @@
-from crewai import Task
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+import streamlit as st
+import os
+from crewai import Agent, Task, Crew, LLM
+from crewai_tools import SerperDevTool
 
 def create_business_analyst_tasks(senior_research_business_analyst, senior_writer_business_analyst, business_name, product_service, target_audience):
     # Research Task
